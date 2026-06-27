@@ -1,0 +1,25 @@
+#copied from the dockerfile.multistage as only few changes were needed to make
+#stage 1 (build stage) - use to build the packages and app
+FROM node:24 AS builder
+
+WORKDIR /app
+
+COPY . .
+
+#install the packages
+RUN npm install
+
+#creates a folder called /dist
+RUN npm run build
+
+#end of stage 1
+
+#stage 2 (runner stage) - used to run the application from the build stage
+#using a docker hardened image(dhi) we can assure even lesser amount of vulnerabilities
+#we will use nginx to serve our frontend
+FROM dhi.io/nginx:1.29-debian13 AS runner
+
+COPY --from=builder /app/dist /usr/share/nginx/html
+
+EXPOSE 8080
+
