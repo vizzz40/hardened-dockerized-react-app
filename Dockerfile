@@ -1,22 +1,28 @@
 FROM node:20-alpine
 
-#create a dedicated non-root user
+#create a dedicated non-root user (higher security for us)
 RUN addgroup -S app && adduser -S -G app app
 
-#all app files under /app
+#set working directory
 WORKDIR /app
 
-#"npm ci" to install the exact versions from package-lock.json
-COPY package*.json ./
+#give the empty app directory to the app user
+RUN chown app:app /app
+
+#switch to the non-root user immediately
+USER app
+
+#copy package files and assign ownership during the copy step
+COPY --chown=app:app package*.json ./
+
+#install exactly the versions from package-lock
 RUN npm ci
 
-#now copy rest of the source and build the production bundle into /dist
-COPY . .
-RUN npm run build
+#copy the rest of the source code and assign ownership during the copy
+COPY --chown=app:app . .
 
-#give non-root use ownership of the app, and then switch to it
-RUN chown -R app:app /app
-USER app
+#build the production bundle into /dist
+RUN npm run build
 
 #preview server listens on this port
 EXPOSE 4173
