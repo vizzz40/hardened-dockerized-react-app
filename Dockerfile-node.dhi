@@ -1,0 +1,31 @@
+#copied from the dockerfile.multistage as only few changes were needed to make
+#stage 1 (build stage) - use to build the packages and app
+FROM node:24 AS builder
+
+WORKDIR /app
+
+COPY . .
+
+#install the packages
+RUN npm install
+
+#creates a folder called /dist
+RUN npm run build
+
+#end of stage 1
+
+#stage 2 (runner stage) - used to run the application from the build stage
+#using a docker hardened image(dhi) we can assure even lesser amount of vulnerabilities
+FROM dhi.io/node:24 AS runner
+
+WORKDIR /app
+
+COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/node_modules ./node_modules
+COPY package*.json ./
+
+USER node
+
+EXPOSE 8080
+
+CMD ["node", "-e", "const http = require('http'); const fs = require('fs'); const path = require('path'); http.createServer((req, res) => { let filePath = path.join(__dirname, 'dist', req.url === '/' ? 'index.html' : req.url); fs.readFile(filePath, (err, data) => { res.writeHead(err ? 404 : 200); res.end(err ? 'Not Found' : data); }); }).listen(8080, () => console.log('Listening on 8080')); "]
