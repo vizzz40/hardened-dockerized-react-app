@@ -8,9 +8,7 @@ on:
 
 jobs:
   build-and-test:
-
     runs-on: ubuntu-latest
-
     steps:
     - uses: actions/checkout@v4
     - name: node.js setup
@@ -21,3 +19,31 @@ jobs:
     - run: npm ci
     - run: npm test
     - run: npm run build
+
+  security-check:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    - name: Trivy installation
+      run: |
+            sudo apt-get install wget gnupg -y
+            wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | gpg --dearmor | sudo tee /usr/share/keyrings/trivy.gpg > /dev/null
+            echo "deb [signed-by=/usr/share/keyrings/trivy.gpg] https://aquasecurity.github.io/trivy-repo/deb generic main" | sudo tee -a /etc/apt/sources.list.d/trivy.list
+            sudo apt-get update -y
+            sudo apt-get install trivy -y
+
+    - name: Trivy FS scan
+      run: trivy fs --format table -o fs-report.json .
+
+    - name: Gitleaks installation
+      run: sudo apt install gitleaks -y
+
+    - name: Gitleaks code scan
+      run: gitleaks detect source .
+      
+
+
+
+
+      
